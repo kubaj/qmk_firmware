@@ -2,31 +2,14 @@
 #include <stdio.h>
 #include "raw_hid.h"
 
+// const rgblight_segment_t PROGMEM _qwerty_layer[] = RGBLIGHT_LAYER_SEGMENTS( {4, 4, HSV_GREEN} );
+// const rgblight_segment_t PROGMEM _colemak_layer[] = RGBLIGHT_LAYER_SEGMENTS( {4, 4, HSV_WHITE} );
 
-// const rgblight_segment_t PROGMEM layer_up[] = RGBLIGHT_LAYER_SEGMENTS(
-//     {16, 2, HSV_WHITE}
-// );
-// // Light LEDs 11 & 12 in purple when keyboard layer 2 is active
-// const rgblight_segment_t PROGMEM layer_down[] = RGBLIGHT_LAYER_SEGMENTS(
-//     {16, 2, HSV_CYAN}
-// );
-
-// const rgblight_segment_t* const PROGMEM my_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
-//     layer_up,    // Overrides caps lock layer
-//     layer_down     // Overrides other layers
-// );
-
-void keyboard_post_init_user(void) {
-    rgblight_set_clipping_range(is_keyboard_master() ? 16 : 3, 7);
-    // rgblight_layers = my_rgb_layers;
-}
-
-layer_state_t layer_state_set_user(layer_state_t state) {
-    // Both layers will light up if both kb layers are active
-    // rgblight_set_layer_state(1, layer_state_cmp(state, 3));
-    // rgblight_set_layer_state(2, layer_state_cmp(state, 2));
-    return state;
-}
+// const rgblight_segment_t* const PROGMEM _rgb_layers[] =
+//     RGBLIGHT_LAYERS_LIST(
+//         _qwerty_layer,
+//         _colemak_layer
+//     );
 
 enum sofle_layers {
     /* _M_XYZ = Mac Os, _W_XYZ = Win/Linux */
@@ -54,6 +37,20 @@ enum {
     TD_CL = 0,
 };
 
+void keyboard_post_init_user(void) {
+    // rgblight_layers = _rgb_layers;
+    rgblight_set_clipping_range(is_keyboard_master() ? 16 : 3, 7);
+}
+
+// layer_state_t default_layer_state_set_user(layer_state_t state) {
+//     rgblight_set_layer_state(0, layer_state_cmp(state, _QWERTY));
+//     return state;
+// }
+
+// layer_state_t layer_state_set_user(layer_state_t state) {
+//     rgblight_set_layer_state(1, layer_state_cmp(state, _COLEMAK));
+//     return state;
+// }
 
 void dance_cl_finished(qk_tap_dance_state_t *state, void *user_data){
     if (state->count == 1) {
@@ -61,7 +58,7 @@ void dance_cl_finished(qk_tap_dance_state_t *state, void *user_data){
     } else if (state->count == 2) {
         register_code16(KC_EQL);
     } else {
-        register_code16(S(KC_EQL));        
+        register_code16(S(KC_EQL));
     }
 }
 
@@ -71,7 +68,7 @@ void dance_cl_reset(qk_tap_dance_state_t *state, void *user_data) {
     } else if (state->count == 2) {
         unregister_code16(KC_EQL);
     } else {
-        unregister_code16(S(KC_EQL));        
+        unregister_code16(S(KC_EQL));
     }
 }
 
@@ -355,7 +352,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 #ifdef ENCODER_ENABLE
 
-void encoder_update_user(uint8_t index, bool clockwise) {
+bool encoder_update_user(uint8_t index, bool clockwise) {
     if (index == 0) {
         if (clockwise) {
             tap_code(KC_VOLU);
@@ -364,16 +361,88 @@ void encoder_update_user(uint8_t index, bool clockwise) {
         }
     } else if (index == 1) {
         if (clockwise) {
-            register_mods(mod_config(MOD_LCTL));
-            register_code(KC_RIGHT);
-            unregister_mods(mod_config(MOD_LCTL));
-            unregister_code(KC_RIGHT);
+            tap_code(KC_PGDN);
         } else {
-            register_mods(mod_config(MOD_LCTL));
-            register_code(KC_LEFT);
-            unregister_mods(mod_config(MOD_LCTL));
-            unregister_code(KC_LEFT);
+            tap_code(KC_PGUP);
         }
+    }
+
+    return true;
+}
+
+#endif
+
+
+#ifdef OLED_DRIVER_ENABLE
+
+static void render_logo(void) {
+    static const char PROGMEM qmk_logo[] = {
+        0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x8f,0x90,0x91,0x92,0x93,0x94,
+        0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf,0xb0,0xb1,0xb2,0xb3,0xb4,
+        0xc0,0xc1,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xcb,0xcc,0xcd,0xce,0xcf,0xd0,0xd1,0xd2,0xd3,0xd4,0
+    };
+
+    oled_write_P(qmk_logo, false);
+}
+
+static void print_status_narrow(void) {
+    // Print current mode
+    oled_write_P(PSTR("\n\n"), false);
+    oled_write_ln_P(PSTR("MODE"), false);
+    oled_write_ln_P(PSTR(""), false);
+    if (keymap_config.swap_lctl_lgui) {
+        oled_write_ln_P(PSTR("MAC"), false);
+    } else {
+        oled_write_ln_P(PSTR("WIN"), false);
+    }
+
+    switch (get_highest_layer(default_layer_state)) {
+        case _QWERTY:
+            oled_write_ln_P(PSTR("Qwrt"), false);
+            break;
+        case _COLEMAK:
+            oled_write_ln_P(PSTR("Clmk"), false);
+            break;
+        default:
+            oled_write_P(PSTR("Undef"), false);
+    }
+    oled_write_P(PSTR("\n\n"), false);
+    // Print current layer
+    oled_write_ln_P(PSTR("LAYER"), false);
+    switch (get_highest_layer(layer_state)) {
+        case _COLEMAK:
+        case _QWERTY:
+            oled_write_P(PSTR("Base\n"), false);
+            break;
+        case _RAISE:
+            oled_write_P(PSTR("Raise"), false);
+            break;
+        case _LOWER:
+            oled_write_P(PSTR("Lower"), false);
+            break;
+        case _ADJUST:
+            oled_write_P(PSTR("Adj\n"), false);
+            break;
+        default:
+            oled_write_ln_P(PSTR("Undef"), false);
+    }
+    oled_write_P(PSTR("\n\n"), false);
+    led_t led_usb_state = host_keyboard_led_state();
+    oled_write_ln_P(PSTR("CPSLK"), led_usb_state.caps_lock);
+}
+
+oled_rotation_t oled_init_user(oled_rotation_t rotation) {
+    if (is_keyboard_master()) {
+        return OLED_ROTATION_270;
+    }
+    return rotation;
+}
+
+void oled_task_user(void) {
+    if (is_keyboard_master()) {
+        print_status_narrow();
+    } else {
+        render_logo();
     }
 }
 

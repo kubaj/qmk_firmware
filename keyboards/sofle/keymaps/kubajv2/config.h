@@ -40,6 +40,8 @@ for more options.
 #define RGBLIGHT_VAL_STEP 32
 
 // #define RGBLIGHT_LAYERS true
+// #define RGBLIGHT_LAYER_BLINK
+// #define RGBLIGHT_LAYERS_OVERRIDE_RGB_OFF
 
 // #define RGBLIGHT_EFFECT_BREATHING = true
 #define RGBLIGHT_EFFECT_SNAKE = true
